@@ -22,6 +22,8 @@ Same-process requests for one session are serialized. Cross-process session leas
 
 `awaiting_input` saves a tool's clarification result and closes the remaining tool-call batch without executing it. Resume with input to let the model produce corrected arguments. Waiting does not consume execution time; model/tool call counters and elapsed execution time survive resumes.
 
+A model response without tool calls or text gets one system request for the final reply while the model call budget allows it; a second empty response finishes as `Completed.`. The configured output conversion applies to the final model reply before it is stored.
+
 `completed`, `partial`, `failed`, `exhausted`, and `cancelled` are terminal states. `partial` records a final model answer after a tool error. Budget exhaustion preserves successful receipts and reports the limit explicitly. Cancellation prevents subsequent tool dispatch and cannot undo an action already in flight. It does not roll back completed external writes.
 
 ## Plugin contracts

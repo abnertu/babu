@@ -6,6 +6,8 @@ run_timeout_seconds = 180
 tool_timeout_seconds = 30
 # state_dir defaults to $XDG_STATE_HOME/babu or ~/.local/state/babu.
 # instructions_path = "~/.config/babu/instructions.md"
+# Convert reply sentences that contain Simplified-only characters: s2t, s2tw or s2hk.
+# output_conversion = "s2tw"
 
 [llm]
 base_url = "http://127.0.0.1:8080/v1"

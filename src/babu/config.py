@@ -1,7 +1,7 @@
 import os
 import tomllib
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
@@ -32,6 +32,7 @@ class HarnessSettings(StrictModel):
     timezone: str = "Asia/Taipei"
     state_dir: Path = Field(default_factory=state_directory)
     instructions_path: Path | None = None
+    output_conversion: Literal["s2t", "s2tw", "s2hk"] | None = None
     instructions_max_bytes: Annotated[int, Field(gt=0, le=1048576)] = 32768
     max_model_calls: Annotated[int, Field(gt=0, le=100)] = 6
     max_tool_calls: Annotated[int, Field(gt=0, le=100)] = 10

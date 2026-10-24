@@ -54,7 +54,7 @@ No root access is needed when Babu runs as your user. Every command accepts `--c
 
 The `[harness]` section controls model/tool call limits, total execution time, tool timeouts, input/context/output size limits, history, and approval expiry. State inspection and cancellation do not need model connectivity or integration credentials.
 
-Sessions are isolated by authenticated principal and session ID. History includes recent completed turns, defaults to 20 messages within two hours, and is excluded once outside that window. This is context expiry, not deletion of stored run records. Bundled [response preferences](src/babu/harness/default_preferences.md) require Taiwanese Traditional Chinese; `harness.instructions_path` replaces them with an external UTF-8 file at startup.
+Sessions are isolated by authenticated principal and session ID. History includes recent completed turns, defaults to 20 messages within two hours, and is excluded once outside that window. This is context expiry, not deletion of stored run records. Bundled [response preferences](src/babu/harness/default_preferences.md) require Taiwanese Traditional Chinese; `harness.instructions_path` replaces them with an external UTF-8 file at startup. `harness.output_conversion` converts reply sentences that contain Simplified-only characters to Traditional Chinese and leaves other sentences unchanged.
 
 ## Plugins
 

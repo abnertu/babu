@@ -363,3 +363,23 @@ def test_calendar_names_monday_based_weeks_on_sunday():
     assert "Today: 2026-10-25 (Sunday)" in text
     assert "This week: 2026-10-19 to 2026-10-25" in text
     assert "Next week: 2026-10-26 to 2026-11-01" in text
+
+
+@pytest.mark.asyncio
+async def test_empty_final_reply_is_requested_once_within_budget(database):
+    from babu.harness.prompt import MISSING_REPLY
+
+    async def handler(args, context):
+        return ToolResult.ok({"task_id": "external-task"})
+
+    llm = ScriptedLLM([call(), AssistantResponse(content=""), AssistantResponse(content="已建立任务。")])
+    result = await runner(database, llm, handler, output_conversion="s2tw").start(request())
+    assert result.status == RunStatus.COMPLETED
+    assert result.content == "已建立任務。"
+    assert result.model_calls == 3
+    assert (llm.histories[-1][-1]["role"], llm.histories[-1][-1]["content"]) == ("system", MISSING_REPLY)
+
+    llm = ScriptedLLM([call(), AssistantResponse(content=""), AssistantResponse(content=""), call()])
+    result = await runner(database, llm, handler).start(request(event="event-2"))
+    assert result.content == "Completed."
+    assert result.model_calls == 3

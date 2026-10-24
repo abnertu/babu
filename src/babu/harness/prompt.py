@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 
+MISSING_REPLY = "Write the final reply to the user from the conversation and tool results above."
+
 
 def calendar(now: datetime) -> str:
     """Name today's weekday and the Monday-to-Sunday weeks, which small models miscount."""

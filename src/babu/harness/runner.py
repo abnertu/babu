@@ -8,6 +8,7 @@ from weakref import WeakValueDictionary
 from zoneinfo import ZoneInfo
 
 from babu.config import HarnessSettings
+from babu.harness.conversion import ScriptConverter
 from babu.harness.models import (
     TERMINAL_STATUSES,
     EventSink,
@@ -16,7 +17,7 @@ from babu.harness.models import (
     RunState,
     RunStatus,
 )
-from babu.harness.prompt import system_prompt
+from babu.harness.prompt import MISSING_REPLY, system_prompt
 from babu.harness.store import RunCancelled, RunStore
 from babu.llm.models import Message
 from babu.llm.protocol import ChatClient
@@ -40,6 +41,7 @@ class RunRunner:
     ) -> None:
         self.llm, self.registry, self.executor, self.store = llm, registry, executor, store
         self.settings, self.preferences = settings, preferences
+        self._converter = ScriptConverter(settings.output_conversion) if settings.output_conversion else None
         self._locks: WeakValueDictionary[tuple[str, str], asyncio.Lock] = WeakValueDictionary()
 
     def _lock(self, principal: str, session: str) -> asyncio.Lock:
@@ -202,8 +204,17 @@ class RunRunner:
                     await self._emit(state, "ModelStarted", sink, model_call=state.model_calls)
                     response = await self.llm.chat(state.messages, self.registry.definitions())
                     if not response.tool_calls:
+                        reply = (response.content or "").strip()
+                        retry = state.model_calls < self.settings.max_model_calls and state.messages[-1].content != MISSING_REPLY
+                        if not reply and retry:
+                            # Some models end a tool run without text; ask once for the reply.
+                            state.messages.append(Message(role="system", content=MISSING_REPLY))
+                            await self.store.save(state)
+                            continue
+                        if reply and self._converter:
+                            reply = self._converter.convert(reply)
                         status = RunStatus.PARTIAL if state.failed_tools else RunStatus.COMPLETED
-                        return await self._finish(state, status, response.content or "Completed.", sink)
+                        return await self._finish(state, status, reply or "Completed.", sink)
                     state.messages.append(
                         Message(
                             role="assistant",
