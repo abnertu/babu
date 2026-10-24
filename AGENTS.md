@@ -48,7 +48,7 @@ git diff --check
 - Add capabilities through the explicit tool registry and validate arguments with Pydantic schemas.
 - Do not add arbitrary shell, filesystem, HTTP, or Notion capabilities to the LLM.
 - Keep environment files, tokens, and database contents out of output, commits, logs, and tests.
-- Do not delete production configuration or runtime data, including existing `/var/lib/personal-agent` deployments, while changing code.
+- Do not delete production configuration or runtime data, including `/etc/babu` and `/var/lib/babu` deployments, while changing code.
 
 ## Deployment
 
