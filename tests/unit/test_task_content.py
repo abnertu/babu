@@ -132,3 +132,28 @@ async def test_task_auto_detects_schema_and_accepts_string_project():
     assert notion.properties["任務"] == {"title": [{"text": {"content": "測試任務"}}]}
     assert notion.properties["狀態"] == {"status": {"name": "To Do"}}
     assert notion.properties["專案"] == {"relation": [{"id": "related-id"}]}
+
+
+@pytest.mark.asyncio
+async def test_task_list_filters_and_sorts_by_due_date():
+    from datetime import date
+
+    from babu.plugins.notion.schemas.query import ListTasksArgs
+
+    class QueryNotion(FakeNotion):
+        async def query_data_source(self, data_source_id, body):
+            self.body = body
+            return []
+
+    notion = QueryNotion()
+    service = TaskService(notion, "tasks", {"title": "Name", "due": "Due", "status": "Status"})
+    result = await service.list(ListTasksArgs(status="To Do", due_from=date(2026, 10, 26), due_to=date(2026, 11, 1)))
+    assert result.success is True
+    assert notion.body["sorts"] == [{"property": "Due", "direction": "ascending"}]
+    assert notion.body["filter"] == {
+        "and": [
+            {"property": "Status", "status": {"equals": "To Do"}},
+            {"property": "Due", "date": {"on_or_after": "2026-10-26"}},
+            {"property": "Due", "date": {"on_or_before": "2026-11-01"}},
+        ]
+    }

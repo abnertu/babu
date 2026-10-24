@@ -7,6 +7,8 @@ from babu.schemas.common import StrictModel
 
 class ListTasksArgs(StrictModel):
     status: str | None = Field(default=None, max_length=100)
+    due_from: date | None = Field(default=None, description="Earliest due date, inclusive (YYYY-MM-DD)")
+    due_to: date | None = Field(default=None, description="Latest due date, inclusive (YYYY-MM-DD)")
     limit: int = Field(default=20, ge=1, le=100)
     start_cursor: str | None = None
 

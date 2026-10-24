@@ -119,9 +119,23 @@ class TaskService:
     async def list(self, args: ListTasksArgs) -> ToolResult:
         try:
             p = await self._get_properties()
-            body: dict[str, Any] = {"page_size": args.limit}
+            due_prop = p.get("due")
+            if (args.due_from or args.due_to) and not due_prop:
+                return ToolResult.fail("UNSUPPORTED_FILTER", "The task database has no due date property")
+            filters: list[dict[str, Any]] = []
             if args.status and p.get("status"):
-                body["filter"] = {"property": p["status"], "status": {"equals": args.status}}
+                filters.append({"property": p["status"], "status": {"equals": args.status}})
+            if args.due_from:
+                filters.append({"property": due_prop, "date": {"on_or_after": args.due_from.isoformat()}})
+            if args.due_to:
+                filters.append({"property": due_prop, "date": {"on_or_before": args.due_to.isoformat()}})
+            body: dict[str, Any] = {"page_size": args.limit}
+            if due_prop:
+                body["sorts"] = [{"property": due_prop, "direction": "ascending"}]
+            if len(filters) > 1:
+                body["filter"] = {"and": filters}
+            elif filters:
+                body["filter"] = filters[0]
             pages = await self.client.query_data_source(self.data_source_id, body)
 
             proj_prop_name = p.get("project")

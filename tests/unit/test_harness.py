@@ -352,3 +352,14 @@ async def test_cancellation_does_not_replace_concurrent_completion(database):
     result = await store.cancel(state.id, "local:1")
     assert result.status == RunStatus.COMPLETED
     assert result.content == "Already done"
+
+
+def test_calendar_names_monday_based_weeks_on_sunday():
+    from datetime import datetime
+
+    from babu.harness.prompt import calendar
+
+    text = calendar(datetime(2026, 10, 25, 23, 30))
+    assert "Today: 2026-10-25 (Sunday)" in text
+    assert "This week: 2026-10-19 to 2026-10-25" in text
+    assert "Next week: 2026-10-26 to 2026-11-01" in text
