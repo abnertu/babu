@@ -7,9 +7,9 @@ from babu.schemas.common import StrictModel
 
 
 class ListTasksArgs(StrictModel):
-    state: Literal["unfinished", "doing", "done", "all"] = Field(
+    state: Literal["unfinished", "doing", "done"] = Field(
         default="unfinished",
-        description="unfinished: 待辦/未完成, To Do and Doing (default); doing: 進行中; done: 已完成; all: every task",
+        description="unfinished: 待辦/未完成, To Do and Doing (default); doing: 進行中; done: 已完成",
     )
     due_from: date | None = Field(default=None, description="Earliest due date, inclusive (YYYY-MM-DD)")
     due_to: date | None = Field(default=None, description="Latest due date, inclusive (YYYY-MM-DD)")

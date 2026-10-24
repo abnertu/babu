@@ -97,14 +97,16 @@ class NotionPlugin:
             ),
             (
                 "notion_list_tasks",
-                "List the principal's Notion tasks, unfinished ones by default. State each task's status in the reply.",
+                "List the principal's Notion tasks, unfinished ones by default. Call it for every question about the user's "
+                "tasks, to-dos or schedule; the conversation does not contain them. State each task's status in the reply.",
                 ListTasksArgs,
                 self.list_tasks,
                 ToolRisk.READ,
             ),
             (
                 "notion_query_expenses",
-                "Query the principal's transactions.",
+                "Query the principal's transactions. Call it for every question about the user's income, spending or "
+                "balances; the conversation does not contain them.",
                 QueryExpensesArgs,
                 self.query_expenses,
                 ToolRisk.READ,

@@ -172,5 +172,5 @@ async def test_task_list_excludes_done_tasks_by_default():
     service = TaskService(notion, "tasks", {"title": "Name", "status": "Status"})
     await service.list(ListTasksArgs())
     assert notion.body["filter"] == {"property": "Status", "status": {"does_not_equal": "Done"}}
-    await service.list(ListTasksArgs(state="all"))
-    assert "filter" not in notion.body
+    await service.list(ListTasksArgs(state="done"))
+    assert notion.body["filter"] == {"property": "Status", "status": {"equals": "Done"}}
