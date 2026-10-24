@@ -1,5 +1,5 @@
 {
-  description = "Policy-controlled personal AI assistant";
+  description = "Babu durable agent harness";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
@@ -54,11 +54,11 @@
       packages = forAllSystems (
         system:
         let
-          environment = pythonSets.${system}.mkVirtualEnv "personal-agent" workspace.deps.default;
+          environment = pythonSets.${system}.mkVirtualEnv "babu" workspace.deps.default;
         in
         {
           default = environment;
-          personal-agent = environment;
+          babu = environment;
         }
       );
 
@@ -66,7 +66,7 @@
         system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
-          environment = pythonSets.${system}.mkVirtualEnv "personal-agent-check" workspace.deps.all;
+          environment = pythonSets.${system}.mkVirtualEnv "babu-check" workspace.deps.all;
           source = lib.fileset.toSource {
             root = ./.;
             fileset = lib.fileset.unions [
@@ -78,7 +78,7 @@
           };
         in
         {
-          application = pkgs.runCommand "personal-agent-check" { nativeBuildInputs = [ environment ]; } ''
+          application = pkgs.runCommand "babu-check" { nativeBuildInputs = [ environment ]; } ''
             export HOME="$TMPDIR/home"
             mkdir -p "$HOME"
             cp -R ${source} "$TMPDIR/source"
@@ -87,8 +87,7 @@
             pytest -q
             ruff check src tests
             mypy src
-            personal-agent --version
-            personal-agent check-config --config config.example.toml
+            babu check-config --config config.example.toml
             touch "$out"
           '';
         }
@@ -100,7 +99,7 @@
           pkgs = nixpkgs.legacyPackages.${system};
           editableOverlay = workspace.mkEditablePyprojectOverlay { root = "$REPO_ROOT"; };
           pythonSet = pythonSets.${system}.overrideScope editableOverlay;
-          environment = pythonSet.mkVirtualEnv "personal-agent-dev" workspace.deps.all;
+          environment = pythonSet.mkVirtualEnv "babu-dev" workspace.deps.all;
         in
         {
           default = pkgs.mkShell {

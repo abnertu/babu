@@ -1,109 +1,85 @@
-# Personal Agent
+# Babu
 
-Personal Discord assistant backed by an OpenAI-compatible llama-swap endpoint and Notion. Discord messages are authorized by guild, channel, and user IDs. The model can only call explicitly registered tools; Pydantic validates tool arguments and SQLite records processed Discord events.
+A single-host agent harness with durable runs, a local CLI, and optional Discord and Notion plugins.
 
-## Current capabilities
+[![Python](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fabnertu%2Fbabu%2Fmain%2Fpyproject.toml&query=%24.project%5B%22requires-python%22%5D&label=Python&logo=python&logoColor=white&color=3776AB)](https://www.python.org/)
 
-- Create Notion tasks with title, optional description, due date, priority, and Markdown page body.
-- Add expenses, list tasks, and query expenses through registered Notion tools.
-- Show animated thinking status in Discord while a tool request is processed.
-- Restrict requests to configured Discord users in one guild and channel.
-- Convert supported Markdown headings, lists, checkboxes, quotes, code blocks, emphasis, inline code, and links into Notion blocks.
-- Resolve Task projects and transaction categories/accounts through validated Notion relations.
-- Search configured Notion data sources.
+## Install
 
-## Nix package
-
-The flake builds the application and its exact `uv.lock` dependency graph with
-uv2nix. Production does not create a virtual environment or resolve packages at
-runtime.
+Install Python 3.13 and [uv](https://docs.astral.sh/uv/), and run a llama-swap OpenAI-compatible endpoint with a tool-capable model.
 
 ```bash
-nix flake check --show-trace --print-build-logs
-nix build --no-link --show-trace --print-build-logs .#personal-agent
-```
-
-The flake exposes `packages.x86_64-linux.personal-agent` and a default development
-shell. Host configuration, systemd ownership and runtime files deliberately remain
-outside this application repository.
-
-## Development
-
-Requirements: Python 3.13 and `uv`.
-
-```bash
+git clone https://github.com/abnertu/babu.git babu
+cd babu
 uv sync --locked
-cp config.example.toml config.toml
-cp .env.example .env
-uv run pytest -q
-uv run ruff check src tests
-uv run mypy src
+mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/babu"
+cp config.example.toml "${XDG_CONFIG_HOME:-$HOME/.config}/babu/config.toml"
 ```
 
-Run locally after filling `config.toml` and `.env`:
+Set `[llm].base_url` and `model` in the configuration. Both service plugins are disabled in the example, so local chat needs no Discord or Notion credentials.
+
+## Usage
 
 ```bash
-uv run --env-file ./.env personal-agent run --config ./config.toml
+uv run babu check-config
+uv run babu check-runtime
+uv run babu chat 'Hello' --session personal
+uv run babu runs
+uv run babu show RUN_ID --events
+uv run babu show RUN_ID --receipts
 ```
 
-The environment file contains `DISCORD_TOKEN` and `NOTION_TOKEN`. Never commit it. Model preferences default to
-`personal_agent/agent/default_preferences.md`; set `app.instructions_path` to load an external UTF-8 file at startup.
+`check-config` validates configuration and plugin schemas; `check-runtime` also checks credentials for enabled plugins. Neither contacts external services. `chat` makes model calls and may execute enabled tools.
 
-Normal conversation uses Discord's typing indicator and receives a direct reply. A visible animated thinking status is only
-created after the model requests a tool; it is updated with the final reply or `Failed` status. Multi-turn conversation context is preserved
-per-channel in SQLite with a 2-hour sliding window. Structured clarification state expires after
-`app.clarification_ttl_seconds` and handles missing relation or argument retries.
-
-## Configuration
-
-`config.toml` contains non-secret runtime configuration. Important sections:
-
-```toml
-[discord]
-guild_id = 123456789
-channel_id = 123456789
-owner_user_ids = [123456789]
-
-[notion.tasks]
-data_source_id = "default-tasks-id"
-
-[notion.finance]
-data_source_id = "default-finance-id"
-
-# Optional per-user Notion overrides
-[notion.users."123456789".tasks]
-data_source_id = "user-specific-tasks-id"
-```
-
-`owner_user_ids` may contain multiple Discord user IDs. Each authorized user can optionally be mapped to their own Notion databases under `[notion.users."<id>"]`; if omitted, the global default Notion databases are used. The task tool uses structured output: `description` is a short optional summary and `body` is the optional full Markdown content. If no description is supplied, the Notion Description property remains empty; if no body is supplied, no page body blocks are added.
-
-## Deployment contract
-
-The production host owns the `personal-agent` account, systemd unit and runtime
-directories. It supplies `/etc/personal-agent/config.toml`, exposes
-`DISCORD_TOKEN` and `NOTION_TOKEN` in the process environment, and keeps SQLite
-state under `/var/lib/personal-agent`. Those mutable files and credentials never
-enter this repository or the Nix store.
-
-Validate a prepared configuration without contacting external services:
+Runs persist their model/tool messages, completed tool receipts, execution counters, and events. Repeated delivery of the same source event reuses its run. Resume interrupted work, provide requested input, approve a pending operation, or cancel a run:
 
 ```bash
-personal-agent check-config --config /etc/personal-agent/config.toml
-personal-agent check-runtime --config /etc/personal-agent/config.toml
+uv run babu resume RUN_ID
+uv run babu resume RUN_ID --input 'Use the cash account'
+uv run babu resume RUN_ID --approve
+uv run babu cancel RUN_ID
 ```
 
-## Architecture
+Approval applies only to the saved operation and its original arguments. A run with an uncertain external write stops as `outcome_unknown`; inspect the external system before starting a replacement run. Completed writes remain completed when a run is cancelled or exhausts its budget.
 
-```text
-Discord message
-  -> guild/channel/user authorization
-  -> event idempotency claim in SQLite
-  -> LLM tool call
-  -> registry lookup and Pydantic validation
-  -> policy evaluation
-  -> Notion adapter
-  -> final LLM response
-  -> Discord status message update
+## Configuration and state
+
+| Content | Default location |
+| --- | --- |
+| Configuration | `$XDG_CONFIG_HOME/babu/config.toml`, or `~/.config/babu/config.toml` |
+| Optional environment file | The same configuration directory, `agent.env` |
+| SQLite state | `$XDG_STATE_HOME/babu/babu.db`, or `~/.local/state/babu/babu.db` |
+
+No root access is needed when Babu runs as your user. Every command accepts `--config PATH` and `--env-file PATH`; `harness.state_dir` overrides the state directory. Explicit paths support `~`. Relative XDG environment paths are ignored. Babu does not load a working-directory `.env` or legacy configuration automatically.
+
+The `[harness]` section controls model/tool call limits, total execution time, tool timeouts, input/context/output size limits, history, and approval expiry. State inspection and cancellation do not need model connectivity or integration credentials.
+
+Sessions are isolated by authenticated principal and session ID. History includes recent completed turns, defaults to 20 messages within two hours, and is excluded once outside that window. This is context expiry, not deletion of stored run records. Bundled [response preferences](src/babu/harness/default_preferences.md) favor Traditional Chinese; `harness.instructions_path` replaces them with an external UTF-8 file at startup.
+
+## Plugins
+
+Plugins are trusted Python code bundled with Babu and explicitly enabled in configuration. The model can invoke only registered tools with Pydantic-validated arguments. The host controls policy, approval, budgets, and execution receipts.
+
+For Discord, enable `[plugins.discord]`, set the guild/channel IDs and allowed `owner_user_ids`, and provide `DISCORD_TOKEN`. Enable Message Content Intent for the bot and grant channel permissions to read messages, send replies, and attach files. Start it with:
+
+```bash
+uv run babu run
 ```
 
-Tokens are kept at the configuration boundary. The model receives registered tool schemas, not credentials or arbitrary network/filesystem access.
+Ordinary messages start runs. Tool execution displays an animated thinking message. Use `!babu show RUN_ID`, `!babu resume RUN_ID`, `!babu approve RUN_ID`, `!babu answer RUN_ID details`, or `!babu cancel RUN_ID` in the authorized channel to control your own runs.
+
+For Notion, enable `[plugins.notion]`, provide `NOTION_TOKEN`, and set both `[plugins.notion.default.tasks]` and `[plugins.notion.default.finance]` data source IDs. Give the integration access to those databases and their relations. Its tools create tasks with optional Markdown bodies, record income/expenses, list tasks, query transactions, search titles, and inspect schemas/options. Property detection supports explicit `properties` overrides.
+
+Optional `[plugins.notion.users."discord:USER_ID"]` or `[plugins.notion.users."local:UNIX_UID"]` mappings provide both task and finance data sources for that principal. Other principals use the configured defaults. Notion routing does not authorize Discord users.
+
+Store tokens in the process environment or the optional `agent.env`, with file permissions `600`. Keep credentials outside version control and the Nix store. Disabled plugins require no credentials. See [config.example.toml](config.example.toml) for the complete example and [harness execution](docs/harness.md) for recovery and plugin contracts.
+
+## Nix
+
+The flake packages Babu and its locked dependencies through uv2nix for `x86_64-linux`:
+
+```bash
+nix build --no-link --show-trace --print-build-logs .#babu
+```
+
+The host owns deployment and mutable files. A user service can use the XDG paths above; Home Manager can generate non-secret configuration. Load secrets at runtime and keep SQLite in writable state storage. Babu 0.2 uses a new configuration and state schema; it does not migrate earlier deployments.

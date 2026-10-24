@@ -1,9 +1,13 @@
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 
-from personal_agent.discord.handler import MessageAuthorizer, handle_message
+from babu.harness.models import RunRequest, RunState, RunStatus
+from babu.plugins.discord.bot import DiscordPlugin
+from babu.plugins.discord.config import DiscordSettings
+from babu.plugins.discord.handler import MessageAuthorizer
 
 
 def message(user=1, channel=2, guild=3, bot=False, content="hello"):
@@ -12,225 +16,67 @@ def message(user=1, channel=2, guild=3, bot=False, content="hello"):
         yield
 
     return SimpleNamespace(
+        id=100,
         author=SimpleNamespace(id=user, bot=bot),
         channel=SimpleNamespace(id=channel, typing=typing),
-        guild=SimpleNamespace(id=guild),
+        guild=SimpleNamespace(id=guild) if guild else None,
         content=content,
     )
 
 
-@pytest.mark.asyncio
-async def test_authorizer_only_allows_configured_identity():
-    authorizer = MessageAuthorizer(3, 2, [1, 4])
-    assert authorizer.allows(message())
-    assert authorizer.allows(message(user=4))
-    assert not authorizer.allows(message(user=9))
-    assert not authorizer.allows(message(channel=9))
-    assert not authorizer.allows(message(bot=True))
+def test_authorizer_checks_all_discord_dimensions():
+    auth = MessageAuthorizer(3, 2, [1, 4])
+    assert auth.allows(message())
+    assert auth.allows(message(user=4))
+    assert not auth.allows(message(user=9))
+    assert not auth.allows(message(channel=9))
+    assert not auth.allows(message(guild=9))
+    assert not auth.allows(message(guild=None))
+    assert not auth.allows(message(bot=True))
 
 
 @pytest.mark.asyncio
-async def test_unauthorized_message_is_ignored():
-    sent = []
-    msg = message(user=9)
-    msg.channel.send = sent.append
-    await handle_message(msg, MessageAuthorizer(3, 2, 1), lambda _: _reply())
-    assert sent == []
+async def test_unauthorized_message_never_enters_harness():
+    harness = AsyncMock()
+    plugin = DiscordPlugin(DiscordSettings(guild_id=3, channel_id=2, owner_user_ids=[1]), harness)
+    await plugin.on_message(message(user=9))
+    harness.start.assert_not_called()
+    harness.store.get.assert_not_called()
+    await plugin.close()
 
 
 @pytest.mark.asyncio
-async def test_empty_response_still_confirms_completion():
-    sent = []
+async def test_transport_passes_identity_and_renders_tool_progress():
+    from babu.harness.models import RunEvent
+
+    harness = AsyncMock()
     msg = message()
+    status = SimpleNamespace(edit=AsyncMock())
+    msg.channel.send = AsyncMock(return_value=status)
 
-    async def send(value):
-        status = SimpleNamespace(content=value)
+    async def start(request, sink):
+        assert request.principal_id == "discord:1"
+        assert request.session_id == "3:2"
+        await sink(RunEvent(sequence=1, run_id="run", kind="ToolStarted"))
+        return RunState(id="run", request=request, status=RunStatus.COMPLETED, content="Created")
 
-        async def edit(*, content):
-            status.content = content
-
-        status.edit = edit
-        sent.append(status)
-        return status
-
-    msg.channel.send = send
-
-    async def respond(*args, **kwargs):
-        from personal_agent.agent.tool_loop import AgentResponse
-
-        return AgentResponse("")
-
-    await handle_message(msg, MessageAuthorizer(3, 2, 1), respond)
-    assert sent[0].content == "已完成。"
+    harness.start.side_effect = start
+    plugin = DiscordPlugin(DiscordSettings(guild_id=3, channel_id=2, owner_user_ids=[1]), harness)
+    await plugin.on_message(msg)
+    assert msg.channel.send.call_args.kwargs["file"].filename == "clawd-thinking.gif"
+    status.edit.assert_awaited_once_with(content="Created", attachments=[])
+    await plugin.close()
 
 
 @pytest.mark.asyncio
-async def test_pending_message_is_updated_with_reply():
-    sent = []
-    msg = message()
-
-    async def send(value):
-        status = SimpleNamespace(content=value)
-
-        async def edit(*, content):
-            status.content = content
-
-        status.edit = edit
-        sent.append(status)
-        return status
-
-    msg.channel.send = send
-
-    async def respond(*args, **kwargs):
-        from personal_agent.agent.tool_loop import AgentResponse
-
-        return AgentResponse("reply")
-
-    await handle_message(msg, MessageAuthorizer(3, 2, 1), respond)
-    assert sent[0].content == "reply"
-
-
-@pytest.mark.asyncio
-async def test_tool_task_updates_thinking_message():
-    sent = []
-    msg = message()
-
-    async def send(value=None, *, file=None, **kwargs):
-        status = SimpleNamespace(content=value, file=file, attachments=[file] if file else [])
-
-        async def edit(*, content=None, attachments=None, **kwargs):
-            if content is not None:
-                status.content = content
-            if attachments is not None:
-                status.attachments = attachments
-
-        status.edit = edit
-        sent.append(status)
-        return status
-
-    async def respond(*args, on_tool_started, **kwargs):
-        from personal_agent.agent.tool_loop import AgentResponse
-
-        await on_tool_started()
-        return AgentResponse("建立完成", used_tools=True)
-
-    msg.channel.send = send
-    await handle_message(msg, MessageAuthorizer(3, 2, 1), respond)
-    assert len(sent) == 1
-    assert sent[0].content == "建立完成"
-    assert sent[0].attachments == []
-    assert sent[0].file is not None
-    assert sent[0].file.filename == "clawd-thinking.gif"
-
-
-@pytest.mark.asyncio
-async def test_failed_tool_changes_thinking_to_failed():
-    sent = []
-    msg = message()
-
-    async def send(value=None, *, file=None, **kwargs):
-        status = SimpleNamespace(content=value, file=file, attachments=[file] if file else [])
-
-        async def edit(*, content=None, attachments=None, **kwargs):
-            if content is not None:
-                status.content = content
-            if attachments is not None:
-                status.attachments = attachments
-
-        status.edit = edit
-        sent.append(status)
-        return status
-
-    async def respond(*args, on_tool_started, **kwargs):
-        from personal_agent.agent.tool_loop import AgentResponse
-
-        await on_tool_started()
-        return AgentResponse("Notion 拒絕請求", used_tools=True, tool_failed=True)
-
-    msg.channel.send = send
-    await handle_message(msg, MessageAuthorizer(3, 2, 1), respond)
-    assert sent[0].content == "❌ Failed\n\nNotion 拒絕請求"
-    assert sent[0].attachments == []
-    assert sent[0].file is not None
-
-
-@pytest.mark.asyncio
-async def test_failed_response_updates_pending_message():
-    sent = []
-    msg = message()
-
-    async def send(value):
-        status = SimpleNamespace(content=value)
-
-        async def edit(*, content):
-            status.content = content
-
-        status.edit = edit
-        sent.append(status)
-        return status
-
-    msg.channel.send = send
-    with pytest.raises(RuntimeError, match="boom"):
-        await handle_message(msg, MessageAuthorizer(3, 2, 1), _failed_reply)
-    assert sent[0].content.startswith("❌ Failed")
-
-
-@pytest.mark.asyncio
-async def test_bot_on_message_preserves_and_injects_conversation_history():
-    from personal_agent.agent.tool_loop import AgentResponse
-    from personal_agent.discord.bot import PersonalAgentBot
-    from personal_agent.storage.db import Database
-
-    database = Database("sqlite+aiosqlite:///:memory:")
-    await database.create_schema()
-
-    received_histories = []
-
-    class MockRuntime:
-        clarification_ttl_seconds = 600
-
-        async def respond(self, content: str, history=None, **kwargs):
-            received_histories.append(history)
-            return AgentResponse(f"Echo: {content}")
-
-    authorizer = MessageAuthorizer(guild_id=3, channel_id=2, owner_user_ids=1)
-    bot = PersonalAgentBot(token="fake", authorizer=authorizer, runtime=MockRuntime(), database=database)
-
-    async def send_msg(content):
-        return SimpleNamespace(content=content, edit=lambda **kw: None)
-
-    msg1 = message(user=1, channel=2, guild=3, content="Turn 1")
-    msg1.id = 101
-    msg1.channel.send = send_msg
-    await bot.on_message(msg1)
-
-    assert len(received_histories) == 1
-    assert received_histories[0] == []  # First turn has no history
-
-    msg2 = message(user=1, channel=2, guild=3, content="Turn 2")
-    msg2.id = 102
-    msg2.channel.send = send_msg
-    await bot.on_message(msg2)
-
-    assert len(received_histories) == 2
-    assert len(received_histories[1]) == 2
-    assert received_histories[1][0].role == "user"
-    assert received_histories[1][0].content == "Turn 1"
-    assert received_histories[1][1].role == "assistant"
-    assert received_histories[1][1].content == "Echo: Turn 1"
-
-    await database.close()
-
-
-async def _reply(*args, **kwargs):
-    from personal_agent.agent.tool_loop import AgentResponse
-
-    return AgentResponse("reply")
-
-
-async def _empty_reply():
-    return ""
-
-
-async def _failed_reply(*args, **kwargs):
-    raise RuntimeError("boom")
+async def test_approval_uses_authenticated_principal():
+    harness = AsyncMock()
+    request = RunRequest(principal_id="discord:1", session_id="s", source="fixture", event_id="e", content="x")
+    harness.resume.return_value = RunState(id="run", request=request, status=RunStatus.COMPLETED, content="Done")
+    plugin = DiscordPlugin(DiscordSettings(guild_id=3, channel_id=2, owner_user_ids=[1]), harness)
+    msg = message(content="!babu approve run")
+    msg.channel.send = AsyncMock()
+    await plugin.on_message(msg)
+    assert harness.resume.call_args.args == ("run", "discord:1")
+    assert harness.resume.call_args.kwargs["approved"] is True
+    await plugin.close()

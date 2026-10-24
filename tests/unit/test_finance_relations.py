@@ -2,9 +2,9 @@ from datetime import date
 
 import pytest
 
-from personal_agent.schemas.expense import AddExpenseArgs
-from personal_agent.tools.notion.finance import FinanceService
-from personal_agent.tools.notion.relations import ResolvedRelation
+from babu.plugins.notion.finance import FinanceService
+from babu.plugins.notion.relations import ResolvedRelation
+from babu.plugins.notion.schemas.expense import AddExpenseArgs
 
 
 class FakeNotion:
@@ -41,7 +41,7 @@ async def test_expense_writes_category_and_account_relations():
 
 @pytest.mark.asyncio
 async def test_expense_auto_detects_schema_and_accepts_string_relations():
-    from personal_agent.tools.notion.schema import NotionSchemaCache
+    from babu.plugins.notion.schema import NotionSchemaCache
 
     class SchemaNotion(FakeNotion):
         async def retrieve_data_source(self, data_source_id):

@@ -1,7 +1,7 @@
 import pytest
 
-from personal_agent.schemas.task import CreateTaskArgs
-from personal_agent.tools.notion.tasks import TaskService
+from babu.plugins.notion.schemas.task import CreateTaskArgs
+from babu.plugins.notion.tasks import TaskService
 
 
 class FakeNotion:
@@ -17,7 +17,7 @@ class FakeNotion:
 
 class FakeResolver:
     async def resolve(self, data_source_id, title_property, reference):
-        from personal_agent.tools.notion.relations import ResolvedRelation
+        from babu.plugins.notion.relations import ResolvedRelation
 
         return ResolvedRelation("related-id", reference.name or "related")
 
@@ -92,14 +92,14 @@ async def test_description_and_body_remain_within_their_own_limits():
 async def test_task_project_is_written_as_relation():
     notion = FakeNotion()
     service = TaskService(notion, "tasks", {"title": "Name", "project": "Project"}, FakeResolver(), "projects")
-    result = await service.create(CreateTaskArgs(title="部署", project={"name": "Personal Agent"}))
+    result = await service.create(CreateTaskArgs(title="部署", project={"name": "Babu"}))
     assert result.success is True
     assert notion.properties["Project"] == {"relation": [{"id": "related-id"}]}
 
 
 @pytest.mark.asyncio
 async def test_task_auto_detects_schema_and_accepts_string_project():
-    from personal_agent.tools.notion.schema import NotionSchemaCache
+    from babu.plugins.notion.schema import NotionSchemaCache
 
     class SchemaNotion(FakeNotion):
         async def retrieve_data_source(self, data_source_id):

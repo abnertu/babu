@@ -1,6 +1,6 @@
 import pytest
 
-from personal_agent.tools.notion.schema import NotionSchemaCache
+from babu.plugins.notion.schema import NotionSchemaCache
 
 
 class FakeClient:
@@ -153,7 +153,7 @@ async def test_resolve_task_properties_detection():
 
 @pytest.mark.asyncio
 async def test_get_property_options_and_summary():
-    from personal_agent.tools.notion.mapping import extract_page_properties
+    from babu.plugins.notion.mapping import extract_page_properties
 
     class FullFakeClient(FakeClient):
         async def query_data_source(self, data_source_id, body=None):

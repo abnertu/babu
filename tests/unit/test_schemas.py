@@ -4,8 +4,8 @@ from decimal import Decimal
 import pytest
 from pydantic import ValidationError
 
-from personal_agent.schemas.expense import AddExpenseArgs
-from personal_agent.schemas.task import CreateTaskArgs
+from babu.plugins.notion.schemas.expense import AddExpenseArgs
+from babu.plugins.notion.schemas.task import CreateTaskArgs
 
 
 def test_task_schema_strips_title():

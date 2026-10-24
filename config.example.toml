@@ -1,15 +1,11 @@
-[app]
+[harness]
 timezone = "Asia/Taipei"
-max_tool_iterations = 5
-database_url = "sqlite+aiosqlite:////var/lib/personal-agent/agent.db"
-clarification_ttl_seconds = 600
-# instructions_path = "/etc/personal-agent/instructions.md"
-instructions_max_bytes = 32768
-
-[discord]
-guild_id = 123456789
-channel_id = 123456789
-owner_user_ids = [123456789]
+max_model_calls = 6
+max_tool_calls = 10
+run_timeout_seconds = 180
+tool_timeout_seconds = 30
+# state_dir defaults to $XDG_STATE_HOME/babu or ~/.local/state/babu.
+# instructions_path = "~/.config/babu/instructions.md"
 
 [llm]
 base_url = "http://127.0.0.1:8080/v1"
@@ -18,15 +14,25 @@ temperature = 0.2
 max_tokens = 4096
 timeout_seconds = 60
 
-[notion.tasks]
+# Enable only the plugins you need. Disabled plugins require no credentials.
+[plugins.discord]
+enabled = false
+guild_id = 123456789
+channel_id = 123456789
+owner_user_ids = [123456789]
+
+[plugins.notion]
+enabled = false
+
+[plugins.notion.default.tasks]
 data_source_id = "replace-with-tasks-data-source-id"
 
-[notion.finance]
+[plugins.notion.default.finance]
 data_source_id = "replace-with-finance-data-source-id"
 
-# Optional per-user Notion overrides. If defined, requests from this Discord user ID
-# will dynamically route to these databases instead of the default databases above.
-# [notion.users."836446179431677992".tasks]
-# data_source_id = "user1-tasks-data-source-id"
-# [notion.users."836446179431677992".finance]
-# data_source_id = "user1-finance-data-source-id"
+# Override BOTH databases for a principal. Discord identities use discord:<user-id>;
+# local CLI identities use local:<numeric-unix-uid>.
+# [plugins.notion.users."discord:123456789".tasks]
+# data_source_id = "private-tasks-data-source-id"
+# [plugins.notion.users."discord:123456789".finance]
+# data_source_id = "private-finance-data-source-id"
