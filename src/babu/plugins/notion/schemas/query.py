@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Literal
 
 from pydantic import Field
 
@@ -6,7 +7,10 @@ from babu.schemas.common import StrictModel
 
 
 class ListTasksArgs(StrictModel):
-    status: str | None = Field(default=None, max_length=100)
+    state: Literal["unfinished", "doing", "done", "all"] = Field(
+        default="unfinished",
+        description="unfinished: 待辦/未完成, To Do and Doing (default); doing: 進行中; done: 已完成; all: every task",
+    )
     due_from: date | None = Field(default=None, description="Earliest due date, inclusive (YYYY-MM-DD)")
     due_to: date | None = Field(default=None, description="Latest due date, inclusive (YYYY-MM-DD)")
     limit: int = Field(default=20, ge=1, le=100)

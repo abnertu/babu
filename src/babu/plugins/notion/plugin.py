@@ -95,7 +95,13 @@ class NotionPlugin:
                 self.add_transaction,
                 ToolRisk.WRITE_SAFE,
             ),
-            ("notion_list_tasks", "List the principal's Notion tasks.", ListTasksArgs, self.list_tasks, ToolRisk.READ),
+            (
+                "notion_list_tasks",
+                "List the principal's Notion tasks, unfinished ones by default. State each task's status in the reply.",
+                ListTasksArgs,
+                self.list_tasks,
+                ToolRisk.READ,
+            ),
             (
                 "notion_query_expenses",
                 "Query the principal's transactions.",

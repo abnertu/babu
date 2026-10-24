@@ -123,8 +123,10 @@ class TaskService:
             if (args.due_from or args.due_to) and not due_prop:
                 return ToolResult.fail("UNSUPPORTED_FILTER", "The task database has no due date property")
             filters: list[dict[str, Any]] = []
-            if args.status and p.get("status"):
-                filters.append({"property": p["status"], "status": {"equals": args.status}})
+            states = {"unfinished": ("does_not_equal", "Done"), "doing": ("equals", "Doing"), "done": ("equals", "Done")}
+            if args.state in states and p.get("status"):
+                operator, name = states[args.state]
+                filters.append({"property": p["status"], "status": {operator: name}})
             if args.due_from:
                 filters.append({"property": due_prop, "date": {"on_or_after": args.due_from.isoformat()}})
             if args.due_to:
