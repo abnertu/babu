@@ -61,6 +61,8 @@ Sessions are isolated by authenticated principal and session ID. History include
 ## Plugins
 
 Plugins are trusted Python code bundled with Babu and explicitly enabled in configuration. The model can invoke only registered tools with Pydantic-validated arguments. The host controls policy, approval, budgets, and execution receipts.
+Tool definitions expose nested arguments and finite choices to simple model templates.
+Omit optional empty arguments; Pydantic validation remains authoritative.
 
 For Discord, enable `[plugins.discord]`. Set the guild/channel IDs and allowed `owner_user_ids`. Provide `DISCORD_TOKEN`.
 Enable Message Content Intent for the bot. Grant channel permissions to read messages, send replies, and attach files. Start it with:

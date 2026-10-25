@@ -31,6 +31,13 @@ An empty model response gets one system request for the final reply while the mo
 
 Capability plugins register a Pydantic argument schema, description, risk classification, and async handler with `ToolRegistry`. Handlers receive validated arguments and an immutable `ExecutionContext` containing principal, session, run, and operation IDs. Return `ToolResult`. Mark missing input with `requires_input`. Mark uncertain effects with `outcome_unknown`.
 
+Tool definitions expand local schema references and expose finite choices as enums.
+Optional nullable arguments use omission as their canonical empty value.
+Required nullable arguments retain their union.
+Primitive types and constraint descriptions help templates that display only simple schemas.
+Pydantic still validates every call against the original argument schema.
+Recursive or external references remain references; the application does not fetch external schemas.
+
 The host constructs plugin clients, loads credentials only for enabled plugins, and closes resources on shutdown. Plugins are trusted code in the application's process; registration controls model access and does not sandbox Python code. New plugins require explicit loader registration and dependencies fixed at build time.
 
 Transport adapters submit requests or authenticated run-control commands and render `RunEvent` notifications. Events carry sequence numbers, timestamps, run IDs, and operation metadata. Presentation failures do not invalidate a committed tool receipt; replayed source events can retrieve the saved result. The owner can inspect run events and receipts. Application logs contain identifiers and error categories, without prompts, tool arguments, or credentials.

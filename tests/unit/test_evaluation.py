@@ -304,3 +304,81 @@ def test_module_cli_uses_explicit_suite_and_preserves_existing_output(tmp_path):
         server.shutdown()
         server.server_close()
         thread.join()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("intent", ["income", "expense"])
+async def test_schema_consumer_can_select_finance_enum_and_nested_relation(intent):
+    item = case(
+        id="schema-consumer",
+        steps=[{"content": f"Record {intent} 12.50 for fixture, using account id account-fixture."}],
+        notion={
+            "schemas": {
+                "tasks": {"properties": {"Name": {"type": "title"}}},
+                "accounts": {"properties": {"Name": {"type": "title"}}},
+                "finance": {
+                    "properties": {
+                        "Name": {"type": "title"},
+                        "Amount": {"type": "number"},
+                        "Date": {"type": "date"},
+                        "Type": {"type": "select"},
+                        "Account": {"type": "relation", "relation": {"data_source_id": "accounts"}},
+                    }
+                },
+            }
+        },
+        expect={
+            "statuses": ["completed"],
+            "writes": [{"properties": {"Amount": {"number": 12.5}, "Account": {"relation": [{"id": "account-fixture"}]}}}],
+            "required_tools": ["notion_add_transaction"],
+            "review_rubric": "Verify the requested finance type, exact amount, and account relation.",
+        },
+    )
+    calls = 0
+
+    def model(request):
+        nonlocal calls
+        calls += 1
+        if calls > 1:
+            return httpx.Response(200, json=response("已記帳。"))
+        payload = json.loads(request.content)
+        definition = next(t["function"] for t in payload["tools"] if t["function"]["name"] == "notion_add_transaction")
+        properties = definition["parameters"]["properties"]
+        # A simple external tool formatter displays primitive types, enums and
+        # object properties. It cannot display patterns, anyOf or $ref targets.
+        choices = properties["type"].get("enum", [])
+        selected = next((value for value in choices if value.lower() == intent), intent)
+        account_schema = properties["account"]
+        account = (
+            {"id": "account-fixture"}
+            if account_schema.get("type") == "object" and "id" in account_schema.get("properties", {})
+            else "account-fixture"
+        )
+        amount = 12.5 if properties["amount"].get("type") == "number" else None
+        return httpx.Response(
+            200,
+            json=response(
+                calls=[
+                    tool(
+                        "notion_add_transaction",
+                        {"title": "fixture", "amount": amount, "date": "2026-10-25", "type": selected, "account": account},
+                    )
+                ]
+            ),
+        )
+
+    result = await evaluate_case(
+        item,
+        calendar=datetime.fromisoformat("2026-10-25T20:00:00+08:00"),
+        base_url="http://127.0.0.1:18080/v1",
+        model="schema-consumer",
+        settings=HarnessSettings(),
+        model_transport=httpx.MockTransport(model),
+    )
+    assert result["automatic_checks_passed"], {
+        "checks": result["checks"],
+        "fixture_errors": result["fixture_errors"],
+        "driver_error": result["driver_error"],
+        "replies": [state["content"] for state in result["states"]],
+    }
+    assert result["successful_writes"][0]["properties"]["Type"]["select"]["name"].lower() == intent

@@ -45,6 +45,7 @@ class NotionSearchService:
         return None
 
     async def search(self, args: SearchNotionArgs) -> ToolResult:
+        aliases: list[str]
         if args.database:
             aliases = [args.database]
         else:

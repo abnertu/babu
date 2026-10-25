@@ -5,6 +5,8 @@ from pydantic import Field
 
 from babu.schemas.common import StrictModel
 
+from .expense import TransactionType
+
 
 class ListTasksArgs(StrictModel):
     state: Literal["unfinished", "doing", "done"] = Field(
@@ -20,14 +22,14 @@ class ListTasksArgs(StrictModel):
 class QueryExpensesArgs(StrictModel):
     start_date: date | None = None
     end_date: date | None = None
-    type: str | None = Field(default=None, pattern="^(Income|Expense)$")
+    type: TransactionType | None = None
     limit: int = Field(default=20, ge=1, le=100)
     start_cursor: str | None = None
 
 
 class SearchNotionArgs(StrictModel):
     query: str = Field(min_length=1, max_length=500)
-    database: str | None = Field(default=None, pattern="^(tasks|projects|transactions|categories|accounts)$")
+    database: Literal["tasks", "projects", "transactions", "categories", "accounts"] | None = None
     limit: int = Field(default=10, ge=1, le=25)
 
 

@@ -7,6 +7,8 @@ from babu.schemas.common import StrictModel
 
 
 class RelationRef(StrictModel):
+    """Provide exactly one relation id or name, never both."""
+
     id: str | None = Field(default=None, min_length=1)
     name: str | None = Field(default=None, min_length=1, max_length=500)
 
@@ -42,8 +44,8 @@ class RelationRef(StrictModel):
 
 class CreateTaskArgs(StrictModel):
     title: str = Field(min_length=1, max_length=500)
-    due_at: date | datetime | None = None
-    due_end_at: date | datetime | None = None
+    due_at: date | datetime | None = Field(default=None, description="Due date or timestamp in ISO-8601.")
+    due_end_at: date | datetime | None = Field(default=None, description="End date or timestamp in ISO-8601.")
     status: Literal["To Do", "Doing", "Done"] | None = None
     priority: Literal["Low", "Medium", "High", "low", "medium", "high"] | None = None
     project: RelationRef | None = None

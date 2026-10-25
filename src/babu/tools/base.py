@@ -8,6 +8,8 @@ from babu.harness.models import ExecutionContext
 from babu.llm.models import ToolDefinition
 from babu.schemas.common import ToolResult
 
+from .schema import tool_parameters
+
 
 class ToolRisk(StrEnum):
     READ = "read"
@@ -27,7 +29,11 @@ class RegisteredTool:
         self.handler, self.risk, self.binding = handler, risk, binding
 
     def definition(self) -> ToolDefinition:
-        return ToolDefinition(name=self.name, description=self.description, parameters=self.schema.model_json_schema())
+        return ToolDefinition(
+            name=self.name,
+            description=self.description,
+            parameters=tool_parameters(self.schema.model_json_schema()),
+        )
 
     def validate(self, arguments: dict[str, Any]) -> BaseModel:
         return self.schema.model_validate(arguments)
