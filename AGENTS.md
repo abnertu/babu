@@ -58,6 +58,14 @@ git diff --check
 - Give one instruction in each sentence.
 - Write instructions in the imperative and in the active voice.
 - Use one word for one meaning, and one meaning for one word.
+- Review each sentence over these limits.
+- Split it if it holds more than one instruction or fact.
+- A list of items can stay in one sentence.
+- Make a bullet list from more than five items.
+- Write a non-English doc in two passes:
+  1. Write an English draft to these rules.
+  2. Translate the draft. Keep its sentence boundaries and one term for each concept.
+     Keep commands, paths and code unchanged. Use the natural word order of the target language.
 - Update `README.md` when public behavior, configuration, deployment, or validation commands change.
 - Keep implementation history outside repository documentation.
 - Read `config.example.toml` before changing configuration or setup instructions.
