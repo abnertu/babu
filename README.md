@@ -2,6 +2,7 @@
 
 A single-host agent harness with durable runs, a local CLI, and optional Discord and Notion plugins.
 
+[![Babu application validation](https://github.com/abnertu/babu/actions/workflows/check.yml/badge.svg?branch=main)](https://github.com/abnertu/babu/actions/workflows/check.yml)
 [![Python](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fabnertu%2Fbabu%2Fmain%2Fpyproject.toml&query=%24.project%5B%22requires-python%22%5D&label=Python&logo=python&logoColor=white&color=3776AB)](https://www.python.org/)
 
 ## Install
@@ -73,6 +74,13 @@ For Notion, enable `[plugins.notion]`, provide `NOTION_TOKEN`, and set both `[pl
 Optional `[plugins.notion.users."discord:USER_ID"]` or `[plugins.notion.users."local:UNIX_UID"]` mappings provide both task and finance data sources for that principal. Other principals use the configured defaults. Notion routing does not authorize Discord users.
 
 Store tokens in the process environment or the optional `agent.env`, with file permissions `600`. Keep credentials outside version control and the Nix store. Disabled plugins require no credentials. See [config.example.toml](config.example.toml) for the complete example and [harness execution](docs/harness.md) for recovery and plugin contracts.
+
+## Synthetic model evaluation
+
+Run isolated workflows against an explicit loopback model endpoint with `python -m babu.evaluation`.
+The evaluator uses the real harness and Notion plugin with mock HTTP, temporary SQLite, and bundled preferences.
+It never loads application configuration or integration credentials.
+See [evaluation usage](docs/evaluation.md) for fixtures, reports, and review requirements.
 
 ## Nix
 

@@ -65,7 +65,9 @@ async def test_successful_receipt_survives_restart_and_duplicate_delivery(databa
             await super().finish_execution(operation_id, result)
             raise asyncio.CancelledError
 
-    llm = ScriptedLLM([call(), AssistantResponse(content="Created")])
+    initial = call()
+    initial.reasoning_content = "synthetic reasoning before the committed write"
+    llm = ScriptedLLM([initial, AssistantResponse(content="Created")])
     first = runner(database, llm, handler, store=CrashAfterReceipt(database))
     with pytest.raises(asyncio.CancelledError):
         await first.start(request())
@@ -78,6 +80,7 @@ async def test_successful_receipt_survives_restart_and_duplicate_delivery(databa
         assert result.content == "Created"
         assert len(writes) == 1
         assert json.loads(llm.histories[-1][-1]["content"])["data"]["task_id"] == "external-task"
+        assert llm.histories[-1][-2]["reasoning_content"] == initial.reasoning_content
         again = await restored.start(request())
         assert again.id == result.id
         assert len(llm.histories) == 2
@@ -383,3 +386,17 @@ async def test_empty_final_reply_is_requested_once_within_budget(database):
     result = await runner(database, llm, handler).start(request(event="event-2"))
     assert result.content == "Completed."
     assert result.model_calls == 3
+
+
+@pytest.mark.asyncio
+async def test_tool_reasoning_counts_toward_context_budget(database):
+    async def handler(args, context):
+        return ToolResult.ok()
+
+    initial = call()
+    initial.reasoning_content = "x" * 100000
+    llm = ScriptedLLM([initial, AssistantResponse(content="Should not run")])
+    result = await runner(database, llm, handler, max_context_chars=64000).start(request())
+    assert result.status == RunStatus.EXHAUSTED
+    assert result.successful_tools == 1
+    assert len(llm.histories) == 1

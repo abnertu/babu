@@ -10,7 +10,8 @@ A source event identifies one immutable request. Reuse with different input or o
 
 ## Checkpoints and receipts
 
-The runner persists each model tool-call batch before starting its tools. Every operation gets a stable `<run-id>:<tool-index>` ID, and its write classification is saved independently of the current plugin set. Its intent is committed before invocation, and its complete result is committed before the run advances its cursor. Full receipts remain in SQLite when model-visible output is shortened; inspect them with `babu show RUN_ID --receipts`.
+The runner persists each model tool-call batch before starting its tools.
+It retains separate `reasoning_content` for subsequent tool turns and counts it toward the context character limit. Every operation gets a stable `<run-id>:<tool-index>` ID, and its write classification is saved independently of the current plugin set. Its intent is committed before invocation, and its complete result is committed before the run advances its cursor. Full receipts remain in SQLite when model-visible output is shortened; inspect them with `babu show RUN_ID --receipts`.
 
 After an interruption, completed receipts are reused without repeating the corresponding action. An interrupted read can be retried. An interrupted write without a completed receipt stops as `outcome_unknown`; SQLite cannot atomically commit a remote Notion write. The optional Notion `properties.external_id` mapping records the operation ID for manual investigation. Babu does not automatically reconcile uncertain Notion writes or promise exactly-once remote execution.
 
@@ -18,11 +19,11 @@ Same-process requests for one session are serialized. Cross-process session leas
 
 ## Waiting and stopping
 
-`awaiting_approval` saves the original tool call and approval deadline without invoking the handler. The original arguments are displayed for review. Approval is consumed for that operation only. Tool definitions, risks, application version, and plugin routing bindings are fingerprinted; changes invalidate continuation rather than applying an old approval to a new destination. Rejection or expiry cancels the run. Existing Notion create tools retain their configured safe-write policy; sensitive or destructive registered tools require approval.
+`awaiting_approval` saves the original tool call and approval deadline without invoking the handler. The original arguments are displayed for review. Approval is consumed for that operation only. Tool definitions, risks, application version, and plugin routing bindings are fingerprinted. Changes invalidate continuation instead of applying an old approval to a new destination. Rejection or expiry cancels the run. Existing Notion create tools retain their configured safe-write policy; sensitive or destructive registered tools require approval.
 
 `awaiting_input` saves a tool's clarification result and closes the remaining tool-call batch without executing it. Resume with input to let the model produce corrected arguments. Waiting does not consume execution time; model/tool call counters and elapsed execution time survive resumes.
 
-A model response without tool calls or text gets one system request for the final reply while the model call budget allows it; a second empty response finishes as `Completed.`. The configured output conversion applies to the final model reply before it is stored.
+An empty model response gets one system request for the final reply while the model call budget allows it. A second empty response finishes as `Completed.`. The configured output conversion applies to the final model reply before it is stored.
 
 `completed`, `partial`, `failed`, `exhausted`, and `cancelled` are terminal states. `partial` records a final model answer after a tool error. Budget exhaustion preserves successful receipts and reports the limit explicitly. Cancellation prevents subsequent tool dispatch and cannot undo an action already in flight. It does not roll back completed external writes.
 
@@ -32,7 +33,7 @@ Capability plugins register a Pydantic argument schema, description, risk classi
 
 The host constructs plugin clients, loads credentials only for enabled plugins, and closes resources on shutdown. Plugins are trusted code in the application's process; registration controls model access and does not sandbox Python code. New plugins require explicit loader registration and dependencies fixed at build time.
 
-Transport adapters submit requests or authenticated run-control commands and render `RunEvent` notifications. Events carry sequence numbers, timestamps, run IDs, and operation metadata. Presentation failures do not invalidate a committed tool receipt; replayed source events can retrieve the saved result. Run events and receipts are inspectable by their owner; application logs contain identifiers and error categories rather than prompts, tool arguments, or credentials.
+Transport adapters submit requests or authenticated run-control commands and render `RunEvent` notifications. Events carry sequence numbers, timestamps, run IDs, and operation metadata. Presentation failures do not invalidate a committed tool receipt; replayed source events can retrieve the saved result. The owner can inspect run events and receipts. Application logs contain identifiers and error categories, without prompts, tool arguments, or credentials.
 
 ## Validation
 

@@ -70,7 +70,9 @@ class LLMClient:
             ]
             if any(not call.id or not call.name for call in calls) or len({call.id for call in calls}) != len(calls):
                 raise ValueError("Invalid tool call identifiers")
-            result = AssistantResponse(content=message.get("content"), tool_calls=calls)
+            result = AssistantResponse(
+                content=message.get("content"), reasoning_content=message.get("reasoning_content"), tool_calls=calls
+            )
         except (KeyError, IndexError, TypeError, ValueError, AttributeError) as exc:
             raise LLMUnavailable(f"LLM returned malformed tool arguments ({type(exc).__name__})") from exc
         return result

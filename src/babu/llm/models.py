@@ -4,6 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class Message(BaseModel):
     role: str
     content: str | None = None
+    reasoning_content: str | None = None
     tool_call_id: str | None = None
     tool_calls: list[dict[str, object]] | None = None
 
@@ -16,6 +17,7 @@ class ToolCall(BaseModel):
 
 class AssistantResponse(BaseModel):
     content: str | None = None
+    reasoning_content: str | None = None
     tool_calls: list[ToolCall] = Field(default_factory=list)
 
 

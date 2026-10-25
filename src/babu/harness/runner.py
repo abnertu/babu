@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import time
+from collections.abc import Callable
 from datetime import datetime
 from uuid import uuid4
 from weakref import WeakValueDictionary
@@ -38,9 +39,12 @@ class RunRunner:
         store: RunStore,
         settings: HarnessSettings,
         preferences: str = "",
+        *,
+        calendar_clock: Callable[[], datetime] | None = None,
     ) -> None:
         self.llm, self.registry, self.executor, self.store = llm, registry, executor, store
         self.settings, self.preferences = settings, preferences
+        self._calendar_clock = calendar_clock
         self._converter = ScriptConverter(settings.output_conversion) if settings.output_conversion else None
         self._locks: WeakValueDictionary[tuple[str, str], asyncio.Lock] = WeakValueDictionary()
 
@@ -70,7 +74,7 @@ class RunRunner:
                         return state
                 else:
                     state = RunState(id=uuid4().hex, request=request, toolset_id=self.registry.fingerprint())
-                    now = datetime.now(ZoneInfo(self.settings.timezone))
+                    now = self._calendar_clock() if self._calendar_clock else datetime.now(ZoneInfo(self.settings.timezone))
                     state.messages = [
                         Message(role="system", content=system_prompt(now, self.settings.timezone, self.preferences))
                     ]
@@ -195,7 +199,10 @@ class RunRunner:
                             state, RunStatus.EXHAUSTED, "Model call budget exhausted. Completed actions are preserved.", sink
                         )
                     if (
-                        sum(len(m.content or "") + len(json.dumps(m.tool_calls or [])) for m in state.messages)
+                        sum(
+                            len(m.content or "") + len(m.reasoning_content or "") + len(json.dumps(m.tool_calls or []))
+                            for m in state.messages
+                        )
                         > self.settings.max_context_chars
                     ):
                         return await self._finish(state, RunStatus.EXHAUSTED, "Context size limit reached.", sink)
@@ -219,6 +226,7 @@ class RunRunner:
                         Message(
                             role="assistant",
                             content=response.content,
+                            reasoning_content=response.reasoning_content,
                             tool_calls=[
                                 {
                                     "id": call.id,

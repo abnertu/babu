@@ -2,18 +2,24 @@
 
 ## Git
 
-- Write commits in [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/) format, with a body explaining why for non-trivial changes. Mark breaking changes with `!` and a `BREAKING CHANGE:` footer.
-- Author commits as the user alone, with no `Co-Authored-By` or other co-author trailers.
-- Commit as the plan progresses. Before pushing, squash related commits into one to keep history clean.
+- Write commits in [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/) format.
+- For a non-trivial change, write a commit body that explains why.
+- Mark a breaking change with `!` and a `BREAKING CHANGE:` footer.
+- Author commits as the user alone, without `Co-Authored-By` or other co-author trailers.
+- Commit as the plan progresses.
+- Before you push, squash related commits into one commit to keep the history clean.
 - Push only after the user approves that push.
 - Version releases with [Semantic Versioning 2.0.0](https://semver.org/).
 
 ## Tests
 
-- A test enters the repo only when it guards behaviour no existing test covers and fails when that behaviour breaks. Weigh this before adding each one.
-- Run throwaway tests freely to check your work; keep them out of the repo unless they pass that bar.
-- Prioritize schemas, authorization and status replies, LLM response parsing, tool-loop serialization, policy decisions, and Notion task mapping.
-- Treat Notion writes and external model calls as side effects. Use fakes or mock transports in tests.
+- Add a test to the repo only when it guards behavior that no existing test covers.
+- The test must fail when that behavior breaks.
+- Weigh this before you add each test.
+- Run throwaway tests freely to check your work.
+- Keep throwaway tests out of the repo unless they meet the admission rule.
+- Prioritize schemas, authorization, status replies, LLM parsing, tool-loop serialization, policy, and Notion task mapping.
+- Use fakes or mock transports for Notion writes and external model calls.
 
 Run before handoff, including documentation changes:
 
@@ -29,27 +35,46 @@ git diff --check
 
 ## CI
 
-- Keep a CI check only when it catches a concrete failure no existing check covers; identify that failure before adding or retaining it. Apply the test admission rule to CI too.
-- Run repository entry points against real inputs or isolated fixtures. Reject duplicate checks, source-text assertions, copied inventories and checks that only prove a command or file exists.
-- Name workflows, jobs and steps by their target and action. Propagate command failures; missing prerequisites and skipped required coverage cannot count as success.
-- After changing these rules, audit the repository against them. Validate locally, then verify required CI on the pushed commit; report any uncovered contract or unavailable check.
+- Keep a CI check only when it catches a concrete failure that no existing check covers.
+- Identify that failure before you add or keep the check.
+- Apply the test admission rule to CI checks too.
+- Run the repo's entry points against real inputs or isolated fixtures.
+- Reject duplicate checks, source-text assertions, copied inventories, and checks that only prove that a command or file exists.
+- Name each workflow, job, and step by its target and its action.
+- Propagate command failures.
+- Count a missing prerequisite or skipped required coverage as a failure.
+- After you change these rules, audit the repo against them.
+- Validate changes locally.
+- Then verify the required CI on the pushed commit.
+- Report each uncovered contract and each unavailable check.
 
 ## Docs
 
-- Keep this file, `README.md` and every other doc concise and plain: each sentence carries information, with no filler.
-- Update `README.md` when public behavior, configuration, deployment, or validation commands change. Keep operational instructions concise and implementation history out of repository documentation.
+- Keep each doc concise and plain.
+- Make each sentence carry information.
+- Write English docs in US English, to the [ASD-STE100](https://www.asd-ste100.org/) writing rules.
+- Limit each instruction to 20 words and each description to 25 words.
+- Give one instruction in each sentence.
+- Write instructions in the imperative and in the active voice.
+- Use one word for one meaning, and one meaning for one word.
+- Update `README.md` when public behavior, configuration, deployment, or validation commands change.
+- Keep implementation history outside repository documentation.
 - Read `config.example.toml` before changing configuration or setup instructions.
-- Read `src/babu/harness/default_preferences.md` before changing response preferences or instruction loading; it is runtime model input.
-- Read `docs/harness.md` before changing run recovery, tool execution, or plugin contracts.
+- Read `src/babu/harness/default_preferences.md` before changing response preferences or instruction loading.
+- Preserve that file as runtime model input.
+- Read [harness execution](docs/harness.md) before changing run recovery, tool execution, or plugin contracts.
+- Read [model evaluation](docs/evaluation.md) before changing synthetic fixtures or evaluation reports.
 
 ## Safety boundaries
 
 - Keep Discord guild, channel, and user authorization enforced by `MessageAuthorizer`.
-- Add capabilities through the explicit tool registry and validate arguments with Pydantic schemas.
+- Add capabilities through the explicit tool registry.
+- Validate arguments with Pydantic schemas.
 - Do not add arbitrary shell, filesystem, HTTP, or Notion capabilities to the LLM.
 - Keep environment files, tokens, and database contents out of output, commits, logs, and tests.
-- Do not delete production configuration or runtime data, including `/etc/babu` and `/var/lib/babu` deployments, while changing code.
+- Preserve production configuration and runtime data, including deployments at `/etc/babu` and `/var/lib/babu`.
 
 ## Deployment
 
-- Keep the systemd unit, service account, production configuration, and runtime directories in the host configuration, outside this application repository.
+- Keep the systemd unit, service account, production configuration, and runtime directories in the host configuration.
+- Keep those resources outside this application repository.
