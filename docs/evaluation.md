@@ -23,7 +23,8 @@ Completed case results are saved before the next case starts.
 The evaluator exits unsuccessfully when a case fails its automatic checks.
 Automatic success requires review against the frozen rubric before it counts as workflow success.
 Record the review method separately.
-Calibrate automated reviewers against known outcomes; an uncalibrated model must not be the sole quality authority.
+Calibrate automated reviewers against known outcomes.
+Do not use an uncalibrated model as the sole quality authority.
 
 ## Case format
 
@@ -81,7 +82,8 @@ The mock uses zero retry delays and the declared synthetic response delay.
 
 ## Reports and limits
 
-Reports include the suite checksum, budgets, seed, calendar, client exchanges, HTTP requests, writes, states, receipts, and automatic checks.
+Reports include the suite checksum, budgets, seed, calendar, and automatic checks.
+They also record client exchanges, HTTP requests, writes, states, and receipts.
 The calendar is converted to the harness timezone.
 Performance clocks and run deadlines remain real.
 Raw model replies and converted final replies remain separate.

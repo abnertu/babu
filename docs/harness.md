@@ -29,7 +29,7 @@ An empty model response gets one system request for the final reply while the mo
 
 ## Plugin contracts
 
-Capability plugins register a Pydantic argument schema, description, risk classification, and async handler with `ToolRegistry`. Handlers receive validated arguments and an immutable `ExecutionContext` containing principal, session, run, and operation IDs. Return `ToolResult`; mark missing input with `requires_input` and uncertain effects with `outcome_unknown`.
+Capability plugins register a Pydantic argument schema, description, risk classification, and async handler with `ToolRegistry`. Handlers receive validated arguments and an immutable `ExecutionContext` containing principal, session, run, and operation IDs. Return `ToolResult`. Mark missing input with `requires_input`. Mark uncertain effects with `outcome_unknown`.
 
 The host constructs plugin clients, loads credentials only for enabled plugins, and closes resources on shutdown. Plugins are trusted code in the application's process; registration controls model access and does not sandbox Python code. New plugins require explicit loader registration and dependencies fixed at build time.
 
@@ -37,4 +37,5 @@ Transport adapters submit requests or authenticated run-control commands and ren
 
 ## Validation
 
-Exercise the harness through its runner with scripted models and fake tools, and use mock HTTP transports for Notion. Preserve coverage for interruption around writes, duplicate events, approval ownership, session isolation, cancellation, deadlines, and bounded output. CLI tests start a local fake model endpoint and run the actual command against temporary XDG directories and SQLite files. Production APIs are excluded from the test suite.
+Exercise the runner with scripted models and fake tools. Use mock HTTP transports for Notion. Preserve coverage for interruption around writes, duplicate events, and approval ownership.
+Also cover session isolation, cancellation, deadlines, and bounded output. CLI tests start a local fake model endpoint and run the actual command against temporary XDG directories and SQLite files. Production APIs are excluded from the test suite.

@@ -18,7 +18,8 @@
 - Weigh this before you add each test.
 - Run throwaway tests freely to check your work.
 - Keep throwaway tests out of the repo unless they meet the admission rule.
-- Prioritize schemas, authorization, status replies, LLM parsing, tool-loop serialization, policy, and Notion task mapping.
+- Prioritize schema validation, authorization, and status replies.
+- Prioritize LLM parsing, tool-loop serialization, policy, and Notion task mapping.
 - Use fakes or mock transports for Notion writes and external model calls.
 
 Run before handoff, including documentation changes:
