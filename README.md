@@ -71,7 +71,7 @@ Enable Message Content Intent for the bot. Grant channel permissions to read mes
 uv run babu run
 ```
 
-Ordinary messages start runs. Tool execution displays an animated thinking message. Use `!babu show RUN_ID`, `!babu resume RUN_ID`, `!babu approve RUN_ID`, `!babu answer RUN_ID details`, or `!babu cancel RUN_ID` in the authorized channel to control your own runs.
+Ordinary messages start runs. While the model runs, Babu displays an animated thinking message. Use `!babu show RUN_ID`, `!babu resume RUN_ID`, `!babu approve RUN_ID`, `!babu answer RUN_ID details`, or `!babu cancel RUN_ID` in the authorized channel to control your own runs.
 
 For Notion, enable `[plugins.notion]`. Provide `NOTION_TOKEN`. Set both `[plugins.notion.default.tasks]` and `[plugins.notion.default.finance]` data source IDs. Give the integration access to those databases and their relations. Its tools create tasks with optional Markdown bodies and record income/expenses. They also list tasks, query transactions, search titles, and inspect schemas/options. Property detection supports explicit `properties` overrides.
 
