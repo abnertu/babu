@@ -2,7 +2,7 @@
 
 A single-host agent harness with durable runs, a local CLI, and optional Discord and Notion plugins.
 
-[![Babu application validation](https://github.com/abnertu/babu/actions/workflows/check.yml/badge.svg?branch=main)](https://github.com/abnertu/babu/actions/workflows/check.yml)
+[![Validate](https://github.com/abnertu/babu/actions/workflows/check.yml/badge.svg?branch=main)](https://github.com/abnertu/babu/actions/workflows/check.yml?query=branch%3Amain)
 [![Python](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fabnertu%2Fbabu%2Fmain%2Fpyproject.toml&query=%24.project%5B%22requires-python%22%5D&label=Python&logo=python&logoColor=white&color=3776AB)](https://www.python.org/)
 
 ## Install

@@ -1,4 +1,4 @@
-name: Babu application validation
+name: Validate
 
 on:
   push:
