@@ -146,7 +146,7 @@ async def fail(*args, **kwargs):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("failing", ["upload", "edit"])
-async def test_failed_thinking_request_still_delivers_reply(monkeypatch, failing):
+async def test_failed_thinking_request_still_delivers_reply(monkeypatch, caplog, failing):
     monkeypatch.setattr(bot, "THINKING_UPLOAD_WAIT_SECONDS", 0.01)
     harness = AsyncMock()
     msg = message()
@@ -162,12 +162,13 @@ async def test_failed_thinking_request_still_delivers_reply(monkeypatch, failing
     plugin = discord_plugin(harness)
     await deliver(plugin, msg)
     msg.channel.send.assert_any_await("Created")
+    assert "discord_thinking_failed" in caplog.text
     await plugin.close()
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("stalled", ["upload", "edit"])
-async def test_stalled_thinking_request_is_abandoned_not_cancelled(monkeypatch, stalled):
+async def test_stalled_thinking_request_is_abandoned_not_cancelled(monkeypatch, caplog, stalled):
     monkeypatch.setattr(bot, "THINKING_UPLOAD_WAIT_SECONDS", 0.01)
     harness = AsyncMock()
     msg = message()
@@ -186,6 +187,7 @@ async def test_stalled_thinking_request_is_abandoned_not_cancelled(monkeypatch, 
     plugin = discord_plugin(harness)
     await deliver(plugin, msg)
     msg.channel.send.assert_any_await("Created")
+    assert "discord_thinking_failed" in caplog.text
     status.delete.assert_not_awaited()
     stall.released.set()
     await asyncio.wait_for(until(lambda: status.delete.await_count), 1)
